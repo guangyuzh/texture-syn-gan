@@ -1,0 +1,22 @@
+default: &default_params
+    workers: 2 # number of data loading workers
+    batchSize: 64 # input batch size
+    imageSize: 64 # the height / width of the input image to network
+    nz: 100 # size of the latent z vector
+    ngf: 64
+    ndf: 64
+    niter: 25 # number of epochs to train for
+    lr: 0.0002 # learning rate
+    beta1: 0.5 # beta1 for adam
+    cuda: True # enables cuda
+    ngpu: 1 # number of GPUs to use
+    netG: '' # path to netG (to continue training)
+    netD: '' # path to netD (to continue training)
+    outf: 'outputs/' # folder to output images and model checkpoints
+    manualSeed: # manual seed
+
+more_niter:
+    <<: *default_params
+    batchSize: 1
+    niter: 100
+
