@@ -12,7 +12,7 @@ from torch.autograd import Variable
 from gan import _netG, _netD, weights_init
 
 
-class GANNetwork:
+class GANNetwork(object):
 
     def __init__(self, opt):
         self.opt = opt
@@ -28,6 +28,8 @@ class GANNetwork:
         self.nz = int(self.opt.nz)
         self.ngf = int(self.opt.ngf)
         self.ndf = int(self.opt.ndf)
+        self.n_sample = int(self.opt.n_sample)
+        self.npx = int(self.opt.npx)
         self.nc = 3
         self._init_netG()
         self._init_netD()
@@ -94,7 +96,7 @@ class GANNetwork:
         print(self.netD)
 
     def _init_input(self):
-        self.input = torch.FloatTensor(self.opt.batchSize, 3, self.opt.imageSize, self.opt.imageSize)
+        self.input = torch.FloatTensor(self.opt.batchSize, self.nc, self.opt.imageSize, self.opt.imageSize)
         self.noise = torch.FloatTensor(self.opt.batchSize, self.nz, 1, 1)
         self.fixed_noise = torch.FloatTensor(self.opt.batchSize, self.nz, 1, 1).normal_(0, 1)
         self.label = torch.FloatTensor(self.opt.batchSize)
@@ -109,6 +111,18 @@ class GANNetwork:
             self.noise, self.fixed_noise = self.noise.cuda(), self.fixed_noise.cuda()
         self.fixed_noise = Variable(self.fixed_noise)
 
+    def _truncate(self, data):
+        sub_samples = []
+        for batch in data:
+            _l, _m = batch.shape[1], batch.shape[2]
+            assert _l == _m
+            for i in range(self.n_sample):
+                idx_x = random.randint(0, _l - self.npx)
+                idx_y = random.randint(0, _m - self.npx)
+                sub_sample = batch[:, idx_x:idx_x+self.npx, idx_y:idx_y+self.npx]
+                sub_samples.append(sub_sample)
+        return torch.stack(sub_samples)
+
     def train(self):
         cudnn.benchmark = True
         for epoch in range(self.opt.niter):
@@ -119,6 +133,7 @@ class GANNetwork:
                 # train with real
                 self.netD.zero_grad()
                 real_cpu, _ = data
+                real_cpu = self._truncate(real_cpu)
                 batch_size = real_cpu.size(0)
                 if self.opt.cuda:
                     real_cpu = real_cpu.cuda()
@@ -170,4 +185,3 @@ class GANNetwork:
             # do checkpointing
             torch.save(self.netG.state_dict(), '%s/netG_epoch_%d.pth' % (self.opt.outf, epoch))
             torch.save(self.netD.state_dict(), '%s/netD_epoch_%d.pth' % (self.opt.outf, epoch))
-
