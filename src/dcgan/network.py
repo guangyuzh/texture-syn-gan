@@ -121,6 +121,17 @@ class GANNetwork(object):
             self.noise, self.fixed_noise = self.noise.cuda(), self.fixed_noise.cuda()
         self.fixed_noise = Variable(self.fixed_noise)
 
+    def test(self, input_sz, epoch):
+        ### generate texture using netG
+        ### taking input of size 1 * zdim * input_sz * input_sz
+        noise = torch.FloatTensor(1, self.nz, input_sz, input_sz)
+        if self.opt.cuda:
+            noise = noise.cuda()
+        fake = self.netG(noise)
+        vutils.save_image(fake.data,
+                '%s/texture_output_%03d.png' % (self.opt.outf, epoch),
+                normalize=True)
+
 
     def train(self):
         cudnn.benchmark = True
@@ -179,6 +190,7 @@ class GANNetwork(object):
                     vutils.save_image(fake.data,
                                       '%s/fake_samples_epoch_%03d.png' % (self.opt.outf, epoch),
                                       normalize=True)
+            self.test(8, epoch)
 
             # do checkpointing
             torch.save(self.netG.state_dict(), '%s/netG_epoch_%d.pth' % (self.opt.outf, epoch))
