@@ -35,8 +35,7 @@ class _AttrDict(dict):
 
 def _get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', required=True, help='cifar10 | lsun | imagenet | folder | lfw | fake')
-    parser.add_argument('--dataroot', required=True, help='path to dataset')
+    parser.add_argument('--dataset', default='folder', help='cifar10 | lsun | imagenet | folder | lfw | fake')
     parser.add_argument('--config', default='default', help='yaml name to use in config.yml')
 
     opt = parser.parse_args()
@@ -47,7 +46,6 @@ if __name__ == "__main__":
     parser = _get_parser()
     opt = _AttrDict(yaml.load(open('config.yml'))[parser.config])
     opt.dataset = parser.dataset
-    opt.dataroot = parser.dataroot
     print(opt)
 
     try:
