@@ -11,8 +11,6 @@ import torchvision.utils as vutils
 from torch.autograd import Variable
 from gan import _netG, _netD, weights_init
 
-
-
 class GANNetwork(object):
 
     class RandomImageFolder(dset.ImageFolder):
@@ -51,13 +49,16 @@ class GANNetwork(object):
 
         self._load_dataset()
 
-        self.ngpu = int(self.opt.ngpu)
-        self.nz = int(self.opt.nz)
-        self.ngf = int(self.opt.ngf)
-        self.ndf = int(self.opt.ndf)
+        self.ngpu     = int(self.opt.ngpu)
+        self.nz       = int(self.opt.nz)
+        self.ngf      = int(self.opt.ngf)
+        self.ndf      = int(self.opt.ndf)
         self.n_sample = int(self.opt.n_sample)
-        self.npx = int(self.opt.npx)
-        self.nc = 3
+        self.npx      = int(self.opt.npx)
+        self.nw       = int(self.opt.nw)
+        self.ntw      = int(self.opt.ntw)
+        self.nc       = 3
+
         self._init_netG()
         self._init_netD()
         self.criterion = nn.BCELoss()
@@ -78,18 +79,17 @@ class GANNetwork(object):
 
     def _load_dataset(self):
         dataset = self.RandomImageFolder(root=self.opt.dataroot,
-                                   transform=transforms.Compose([
-                                       transforms.Resize(self.opt.imageSize),
-                                       transforms.CenterCrop(self.opt.imageSize),
-                                       transforms.ToTensor(),
-                                       transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                   ]),
-                                   imageSize=self.opt.imageSize,
-                                   npx=self.opt.npx,
-                                   n_sample=self.opt.n_sample
-                                   )
-        self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.opt.batchSize,
-                                                    shuffle=True, num_workers=int(self.opt.workers))
+            transform=transforms.Compose([
+                transforms.Resize(self.opt.imageSize),
+                transforms.CenterCrop(self.opt.imageSize),
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]),
+            imageSize=self.opt.imageSize,
+            npx=self.opt.npx,
+            n_sample=self.opt.n_sample
+        )
+        self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.opt.batchSize, shuffle=True, num_workers=int(self.opt.workers))
 
     def _init_netG(self):
         self.netG = _netG(self.ngpu, self.nz, self.ngf, self.nc)
@@ -106,10 +106,10 @@ class GANNetwork(object):
         print(self.netD)
 
     def _init_input(self):
-        self.input = torch.FloatTensor(self.opt.batchSize, self.nc, self.opt.imageSize, self.opt.imageSize)
-        self.noise = torch.FloatTensor(self.opt.batchSize, self.nz, 1, 1)
-        self.fixed_noise = torch.FloatTensor(self.opt.batchSize, self.nz, 1, 1).normal_(0, 1)
-        self.label = torch.FloatTensor(self.opt.batchSize)
+        self.input = torch.FloatTensor(self.opt.batchSize, self.nc, self.npx, self.npx)
+        self.noise = torch.FloatTensor(self.opt.batchSize, self.nz, self.nw, self.nw)
+        self.fixed_noise = torch.FloatTensor(self.opt.batchSize, self.nz, self.nw, self.nw).normal_(0, 1)
+        self.label = torch.FloatTensor(self.opt.batchSize, self.nw, self.nw)
         self.real_label = 1
         self.fake_label = 0
 
@@ -127,11 +127,12 @@ class GANNetwork(object):
         noise = torch.FloatTensor(1, self.nz, input_sz, input_sz)
         if self.opt.cuda:
             noise = noise.cuda()
+        noise.normal_(0, 1)
         fake = self.netG(noise)
         vutils.save_image(fake.data,
-                '%s/texture_output_%03d.png' % (self.opt.outf, epoch),
-                normalize=True)
-
+            '%s/texture_output_%03d.png' % (self.opt.outf, epoch),
+            normalize=True
+        )
 
     def train(self):
         cudnn.benchmark = True
@@ -147,7 +148,7 @@ class GANNetwork(object):
                 if self.opt.cuda:
                     real_cpu = real_cpu.cuda()
                 self.input.resize_as_(real_cpu).copy_(real_cpu)
-                self.label.resize_(batch_size).fill_(self.real_label)
+                self.label.resize_(batch_size * self.nw**2).fill_(self.real_label)
                 inputv = Variable(self.input)
                 labelv = Variable(self.label)
 
@@ -157,7 +158,7 @@ class GANNetwork(object):
                 D_x = output.data.mean()
 
                 # train with fake
-                self.noise.resize_(batch_size, self.nz, 1, 1).normal_(0, 1)
+                self.noise.resize_(batch_size, self.nz, self.nw, self.nw).normal_(0, 1)
                 noisev = Variable(self.noise)
                 fake = self.netG(noisev)
                 labelv = Variable(self.label.fill_(self.fake_label))
@@ -190,7 +191,7 @@ class GANNetwork(object):
                     vutils.save_image(fake.data,
                                       '%s/fake_samples_epoch_%03d.png' % (self.opt.outf, epoch),
                                       normalize=True)
-            self.test(8, epoch)
+            self.test(self.ntw, epoch)
 
             # do checkpointing
             torch.save(self.netG.state_dict(), '%s/netG_epoch_%d.pth' % (self.opt.outf, epoch))
