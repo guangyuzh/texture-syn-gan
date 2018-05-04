@@ -12,7 +12,34 @@ from torch.autograd import Variable
 from gan import _netG, _netD, weights_init
 
 
+
 class GANNetwork(object):
+
+    class RandomImageFolder(dset.ImageFolder):
+        def __init__(self, *args, **kwargs):
+            self.n_sample  = kwargs['n_sample']
+            self.npx       = kwargs['npx']
+            self.imageSize = kwargs['imageSize']
+            kwargs.pop('n_sample')
+            kwargs.pop('npx')
+            kwargs.pop('imageSize')
+            super().__init__(*args, **kwargs)
+
+            self.offsets = []
+            for i in range(self.n_sample):
+                ox = random.randint(0, self.imageSize - self.npx)
+                oy = random.randint(0, self.imageSize - self.npx)
+                self.offsets.append((ox, oy))
+
+        def __len__(self):
+            return super().__len__() * self.n_sample
+
+        def __getitem__(self, ix):
+            img_ix, sample_ix = divmod(ix, self.n_sample)
+            img, label = super().__getitem__(img_ix)
+            ox, oy = self.offsets[sample_ix]
+            img = img[:, ox:ox+self.npx, oy:oy+self.npx]
+            return img, label
 
     def __init__(self, opt):
         self.opt = opt
@@ -50,34 +77,17 @@ class GANNetwork(object):
             torch.cuda.manual_seed_all(self.opt.manualSeed)
 
     def _load_dataset(self):
-        if self.opt.dataset in ['imagenet', 'folder', 'lfw']:
-            # folder dataset
-            dataset = dset.ImageFolder(root=self.opt.dataroot,
-                                       transform=transforms.Compose([
-                                           transforms.Resize(self.opt.imageSize),
-                                           transforms.CenterCrop(self.opt.imageSize),
-                                           transforms.ToTensor(),
-                                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                       ]))
-        elif self.opt.dataset == 'lsun':
-            dataset = dset.LSUN(self.opt.dataroot, classes=['bedroom_val'],
-                                transform=transforms.Compose([
-                                    transforms.Resize(self.opt.imageSize),
-                                    transforms.CenterCrop(self.opt.imageSize),
-                                    transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                ]))
-        elif self.opt.dataset == 'cifar10':
-            dataset = dset.CIFAR10(root=self.opt.dataroot, download=True,
+        dataset = self.RandomImageFolder(root=self.opt.dataroot,
                                    transform=transforms.Compose([
                                        transforms.Resize(self.opt.imageSize),
+                                       transforms.CenterCrop(self.opt.imageSize),
                                        transforms.ToTensor(),
                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                   ]))
-        elif self.opt.dataset == 'fake':
-            dataset = dset.FakeData(image_size=(3, self.opt.imageSize, self.opt.imageSize),
-                                    transform=transforms.ToTensor())
-        assert dataset
+                                   ]),
+                                   imageSize=self.opt.imageSize,
+                                   npx=self.opt.npx,
+                                   n_sample=self.opt.n_sample
+                                   )
         self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.opt.batchSize,
                                                     shuffle=True, num_workers=int(self.opt.workers))
 
@@ -111,17 +121,6 @@ class GANNetwork(object):
             self.noise, self.fixed_noise = self.noise.cuda(), self.fixed_noise.cuda()
         self.fixed_noise = Variable(self.fixed_noise)
 
-    def _truncate(self, data):
-        sub_samples = []
-        for batch in data:
-            _l, _m = batch.shape[1], batch.shape[2]
-            assert _l == _m
-            for i in range(self.n_sample):
-                idx_x = random.randint(0, _l - self.npx)
-                idx_y = random.randint(0, _m - self.npx)
-                sub_sample = batch[:, idx_x:idx_x+self.npx, idx_y:idx_y+self.npx]
-                sub_samples.append(sub_sample)
-        return torch.stack(sub_samples)
 
     def train(self):
         cudnn.benchmark = True
@@ -133,7 +132,6 @@ class GANNetwork(object):
                 # train with real
                 self.netD.zero_grad()
                 real_cpu, _ = data
-                real_cpu = self._truncate(real_cpu)
                 batch_size = real_cpu.size(0)
                 if self.opt.cuda:
                     real_cpu = real_cpu.cuda()
