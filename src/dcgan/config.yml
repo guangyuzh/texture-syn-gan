@@ -6,8 +6,8 @@ default: &default_params
     nz: 10 # depth of the latent z tensor
     nw: 4 # height and width of z tensor
     ntw: 160 # height and width of z tensor at test time
-    ngf: 64
-    ndf: 64
+    ngf: 128
+    ndf: 128
     niter: 25 # number of epochs to train for
     lr: 0.0002 # learning rate
     beta1: 0.5 # beta1 for adam
@@ -35,8 +35,8 @@ texture_syn:
 archpc:
     <<: *default_params
     dataroot: '/data/adam/dataset/plants/green/'
-    imageSize: 1024
-    n_sample: 320
+    imageSize: 256
+    n_sample: 240
     batchSize: 10
     beta1: 0.1
     lr: 0.0005

@@ -7,7 +7,6 @@ from network import GANNetwork
 
 cudnn.benchmark = True
 
-
 class Unbuffered(object):
     def __init__(self, stream):
         self.stream = stream
@@ -23,15 +22,12 @@ class Unbuffered(object):
     def __getattr__(self, attr):
         return getattr(self.stream, attr)
 
-
 sys.stdout = Unbuffered(sys.stdout)
-
 
 class _AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(_AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
-
 
 def _get_parser():
     parser = argparse.ArgumentParser()
@@ -40,7 +36,6 @@ def _get_parser():
 
     opt = parser.parse_args()
     return opt
-
 
 if __name__ == "__main__":
     parser = _get_parser()
