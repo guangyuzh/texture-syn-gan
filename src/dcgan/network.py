@@ -114,17 +114,21 @@ class GANNetwork(object):
             self.netD.load_state_dict(torch.load(self.opt.netD))
         print(self.netD)
 
-    def _get_noise(self, batchSize):
+    def _get_noise(self, batchSize, nw=None):
+        if nw is None:
+            nw = self.nw
         if self.model_type == 'SGAN':
-            self.noise = [torch.FloatTensor(batchSize, self.nz, self.nw, self.nw).normal_(0, 1)]
+            noise = [torch.FloatTensor(batchSize, self.nz, nw, nw).normal_(0, 1)]
         elif self.model_type == 'PSGAN':
-            self.noise = [
-                torch.FloatTensor(batchSize, self.nz_local, self.nw, self.nw).normal_(0, 1),
-                torch.FloatTensor(batchSize, self.nz_global, 1, 1).normal_(0, 1),
+            noise = [
+                torch.FloatTensor(batchSize, self.model['nz_local'], nw, nw).normal_(0, 1),
+                torch.FloatTensor(batchSize, self.model['nz_global'], 1, 1).normal_(0, 1),
                 torch.FloatTensor(batchSize).uniform_(0, 2*math.pi)
             ]
         if self.opt.cuda:
-            self.noise = list(map(lambda x: x.cuda(), self.noise))
+            noise = list(map(lambda x: x.cuda(), noise))
+        noise = list(map(lambda x: Variable(x), noise))
+        return noise
 
     def _init_input(self):
         self.input = torch.FloatTensor(self.opt.batchSize, self.nc, self.npx, self.npx)
@@ -138,17 +142,12 @@ class GANNetwork(object):
             self.netG.cuda()
             self.criterion.cuda()
             self.input, self.label = self.input.cuda(), self.label.cuda()
-            self.noise, self.fixed_noise = self.noise.cuda(), self.fixed_noise.cuda()
-        self.fixed_noise = Variable(self.fixed_noise)
 
     def test(self, input_sz, epoch):
         ### generate texture using netG
         ### taking input of size 1 * zdim * input_sz * input_sz
-        noise = torch.FloatTensor(1, self.nz, input_sz, input_sz)
-        if self.opt.cuda:
-            noise = noise.cuda()
-        noise.normal_(0, 1)
-        fake = self.netG(Variable(noise))
+        noise = self._get_noise(1, self.ntw)
+        fake = self.netG(*noise)
         vutils.save_image(fake.data,
             '%s/texture_output_%03d.png' % (self.opt.outf, epoch),
             normalize=True
@@ -178,8 +177,7 @@ class GANNetwork(object):
                 D_x = output.data.mean()
 
                 # train with fake
-                self.noise = self._get_noise(batch_size)
-                noisev = list(map(lambda x: Variable(x), self.noise))
+                noisev = self._get_noise(batch_size)
                 fake = self.netG(*noisev)
                 labelv = Variable(self.label.fill_(self.fake_label))
                 output = self.netD(fake.detach())
@@ -207,7 +205,7 @@ class GANNetwork(object):
                     vutils.save_image(real_cpu,
                                       '%s/real_samples.png' % self.opt.outf,
                                       normalize=True)
-                    fake = self.netG(self.fixed_noise)
+                    fake = self.netG(*self.fixed_noise)
                     vutils.save_image(fake.data,
                                       '%s/fake_samples_epoch_%03d.png' % (self.opt.outf, epoch),
                                       normalize=True)

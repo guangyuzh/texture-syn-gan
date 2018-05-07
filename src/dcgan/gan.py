@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.utils.data
+from torch.autograd import Variable
 
 
 # custom weights initialization called on netG and netD
@@ -139,10 +140,11 @@ class PSGAN(object):
             g_tensor_expanded = g_tensor.repeat(1, 1, nw, nw)
             k1 = self.aux1(g_tensor.view(batch_size, -1)).view(batch_size, -1, 1, 1).repeat(1, 1, nw, nw)
             k2 = self.aux2(g_tensor.view(batch_size, -1)).view(batch_size, -1, 1, 1).repeat(1, 1, nw, nw)
-            xx = torch.arrange(self.nw).repeat(nw, 1).repeat(batch_size, self.nz_period)
-            yy = torch.arrange(self.nw).repeat(nw, 1).t().repeat(batch_size, self.nz_period)
+            xx = Variable(torch.arange(nw).repeat(nw, 1).repeat(batch_size, self.nz_period, 1, 1).cuda())
+            yy = Variable(torch.arange(nw).repeat(nw, 1).t().repeat(batch_size, self.nz_period, 1, 1).cuda())
             phi_tensor = phi.view(-1, 1, 1, 1).repeat(1, self.nz_period, nw, nw)
-            p_tensor = torch.sin(k1*xx + k2*yy + phi)
+            print(k1.shape, k2.shape, xx.shape, yy.shape, phi_tensor.shape)
+            p_tensor = torch.sin(k1*xx + k2*yy + phi_tensor)
 
             input = torch.cat([l_tensor, g_tensor_expanded, p_tensor], 1)
             # output : batch_size x nz x nw x nw

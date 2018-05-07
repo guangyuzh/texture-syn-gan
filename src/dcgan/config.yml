@@ -49,7 +49,7 @@ texture_syn:
 
 archpc:
     <<: *default_params
-    dataroot: '/data/adam/dataset/plants/flower2/'
+    dataroot: '../../data/dtd/images/braided/'
     imageSize: 600
     ntw: 40
     n_sample: 480
