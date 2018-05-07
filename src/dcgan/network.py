@@ -9,7 +9,9 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
 from torch.autograd import Variable
-from gan import _netG, _netD, weights_init
+from functools import lru_cache
+from timeit import timeit
+import gan
 
 class GANNetwork(object):
 
@@ -23,6 +25,7 @@ class GANNetwork(object):
             kwargs.pop('imageSize')
             super().__init__(*args, **kwargs)
 
+            self.cache = {}
             self.offsets = []
             for i in range(self.n_sample):
                 ox = random.randint(0, self.imageSize - self.npx)
@@ -32,11 +35,17 @@ class GANNetwork(object):
         def __len__(self):
             return super().__len__() * self.n_sample
 
+        @lru_cache(maxsize=None)
         def __getitem__(self, ix):
             img_ix, sample_ix = divmod(ix, self.n_sample)
-            img, label = super().__getitem__(img_ix)
+            if img_ix in self.cache:
+                img, label = self.cache[img_ix]
+            else:
+                img_data, label = super().__getitem__(img_ix)
+                img = img_data.clone()
+                self.cache[img_ix] = img, label
             ox, oy = self.offsets[sample_ix]
-            img = img[:, ox:ox+self.npx, oy:oy+self.npx]
+            img = img[:, ox:ox+self.npx, oy:oy+self.npx].clone()
             return img, label
 
     def __init__(self, opt):
@@ -92,15 +101,15 @@ class GANNetwork(object):
         self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.opt.batchSize, shuffle=True, num_workers=int(self.opt.workers))
 
     def _init_netG(self):
-        self.netG = _netG(self.ngpu, self.nz, self.ngf, self.nc)
-        self.netG.apply(weights_init)
+        self.netG = getattr(gan, self.opt.model_type)._netG(self.ngpu, self.nz, self.ngf, self.nc)
+        self.netG.apply(gan.weights_init)
         if self.opt.netG != '':
             self.netG.load_state_dict(torch.load(self.opt.netG))
         print(self.netG)
 
     def _init_netD(self):
-        self.netD = _netD(self.ngpu, self.nc, self.ndf)
-        self.netD.apply(weights_init)
+        self.netD = getattr(gan, self.opt.model_type)._netD(self.ngpu, self.nc, self.ndf)
+        self.netD.apply(gan.weights_init)
         if self.opt.netD != '':
             self.netD.load_state_dict(torch.load(self.opt.netD))
         print(self.netD)
@@ -128,7 +137,7 @@ class GANNetwork(object):
         if self.opt.cuda:
             noise = noise.cuda()
         noise.normal_(0, 1)
-        fake = self.netG(noise)
+        fake = self.netG(Variable(noise))
         vutils.save_image(fake.data,
             '%s/texture_output_%03d.png' % (self.opt.outf, epoch),
             normalize=True

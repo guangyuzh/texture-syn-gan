@@ -3,11 +3,11 @@ default: &default_params
     workers: 2 # number of data loading workers
     batchSize: 64 # input batch size
     imageSize: 516 # the height / width of the input image to network
-    nz: 10 # depth of the latent z tensor
+    nz: 20 # depth of the latent z tensor
     nw: 4 # height and width of z tensor
     ntw: 160 # height and width of z tensor at test time
-    ngf: 128
-    ndf: 128
+    ngf: 64
+    ndf: 64
     niter: 25 # number of epochs to train for
     lr: 0.0002 # learning rate
     beta1: 0.5 # beta1 for adam
@@ -20,6 +20,7 @@ default: &default_params
     # for Spatial GAN:
     n_sample: 10
     npx: 64 # num of pixels width/height of images in X
+    model_type: 'SGAN'
 
 more_niter:
     <<: *default_params
@@ -35,9 +36,13 @@ texture_syn:
 archpc:
     <<: *default_params
     dataroot: '/data/adam/dataset/plants/green/'
-    imageSize: 256
-    n_sample: 240
-    batchSize: 10
-    beta1: 0.1
-    lr: 0.0005
-    niter: 100
+    imageSize: 600
+    npx: 129
+    nw: 5
+    nz: 50
+    ntw: 40
+    n_sample: 480
+    batchSize: 24
+    lr: 0.0002
+    niter: 200
+    model_type: 'SGAN'
