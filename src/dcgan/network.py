@@ -11,6 +11,7 @@ import torchvision.utils as vutils
 from torch.autograd import Variable
 from functools import lru_cache
 from timeit import timeit
+import math
 import gan
 
 class GANNetwork(object):
@@ -113,10 +114,21 @@ class GANNetwork(object):
             self.netD.load_state_dict(torch.load(self.opt.netD))
         print(self.netD)
 
+    def _get_noise(self, batchSize):
+        if self.model_type == 'SGAN':
+            self.noise = [torch.FloatTensor(batchSize, self.nz, self.nw, self.nw).normal_(0, 1)]
+        elif self.model_type == 'PSGAN':
+            self.noise = [
+                torch.FloatTensor(batchSize, self.nz_local, self.nw, self.nw).normal_(0, 1),
+                torch.FloatTensor(batchSize, self.nz_global, 1, 1).normal_(0, 1),
+                torch.FloatTensor(batchSize).uniform_(0, 2*math.pi)
+            ]
+        if self.opt.cuda:
+            self.noise = list(map(lambda x: x.cuda(), self.noise))
+
     def _init_input(self):
         self.input = torch.FloatTensor(self.opt.batchSize, self.nc, self.npx, self.npx)
-        self.noise = torch.FloatTensor(self.opt.batchSize, self.nz, self.nw, self.nw)
-        self.fixed_noise = torch.FloatTensor(self.opt.batchSize, self.nz, self.nw, self.nw).normal_(0, 1)
+        self.fixed_noise = self._get_noise(self.opt.batchSize)
         self.label = torch.FloatTensor(self.opt.batchSize, self.nw, self.nw)
         self.real_label = 1
         self.fake_label = 0
@@ -166,9 +178,9 @@ class GANNetwork(object):
                 D_x = output.data.mean()
 
                 # train with fake
-                self.noise.resize_(batch_size, self.nz, self.nw, self.nw).normal_(0, 1)
-                noisev = Variable(self.noise)
-                fake = self.netG(noisev)
+                self.noise = self._get_noise(batch_size)
+                noisev = list(map(lambda x: Variable(x), self.noise))
+                fake = self.netG(*noisev)
                 labelv = Variable(self.label.fill_(self.fake_label))
                 output = self.netD(fake.detach())
                 errD_fake = self.criterion(output, labelv)

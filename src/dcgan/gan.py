@@ -137,10 +137,11 @@ class PSGAN(object):
             batch_size, _, nw, _ = l_tensor.size()
 
             g_tensor_expanded = g_tensor.repeat(1, 1, nw, nw)
-            k1 = self.aux1(g_tensor.view(batch_size, -1))
-            k2 = self.aux2(g_tensor.view(batch_size, -1))
+            k1 = self.aux1(g_tensor.view(batch_size, -1)).view(batch_size, -1, 1, 1).repeat(1, 1, nw, nw)
+            k2 = self.aux2(g_tensor.view(batch_size, -1)).view(batch_size, -1, 1, 1).repeat(1, 1, nw, nw)
             xx = torch.arrange(self.nw).repeat(nw, 1).repeat(batch_size, self.nz_period)
             yy = torch.arrange(self.nw).repeat(nw, 1).t().repeat(batch_size, self.nz_period)
+            phi_tensor = phi.view(-1, 1, 1, 1).repeat(1, self.nz_period, nw, nw)
             p_tensor = torch.sin(k1*xx + k2*yy + phi)
 
             input = torch.cat([l_tensor, g_tensor_expanded, p_tensor], 1)
