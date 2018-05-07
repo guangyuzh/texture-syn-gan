@@ -17,7 +17,7 @@ def weights_init(m):
 
 class SGAN(object):
     class _netG(nn.Module):
-        def __init__(self, ngpu, nz, ngf, nc):
+        def __init__(self, ngpu, nc, ngf, nz, **kw):
             super().__init__()
             self.ngpu = ngpu
             self.main = nn.Sequential(
@@ -51,7 +51,7 @@ class SGAN(object):
 
 
     class _netD(nn.Module):
-        def __init__(self, ngpu, nc, ndf):
+        def __init__(self, ngpu, nc, ndf, **kw):
             super().__init__()
             self.ngpu = ngpu
             self.main = nn.Sequential(
@@ -88,13 +88,12 @@ class SGAN(object):
 ### five layers PSGAN
 class PSGAN(object):
     class _netG(nn.Module):
-        def __init__(self, ngpu, nz, ngf, nc):
+        def __init__(self, ngpu, nc, ngf, nz, nh, nz_global, nz_period, **kw):
             super().__init__()
-            self.ngpu = ngpu
-            self.nh = 60
-            self.nz_global = 10
-            self.nz_period = 2
-            self.nw = 5
+            self.ngpu      = ngpu
+            self.nh        = nh
+            self.nz_global = nz_global
+            self.nz_period = nz_period
             self.main = nn.Sequential(
                 # input is nz x 5 x 5
                 # output is nc x 127 x 127
@@ -138,8 +137,8 @@ class PSGAN(object):
             batch_size, _, nw, _ = l_tensor.size()
 
             g_tensor_expanded = g_tensor.repeat(1, 1, nw, nw)
-            k1 = self.aux1(g_tensor.squeeze())
-            k2 = self.aux2(g_tensor.squeeze())
+            k1 = self.aux1(g_tensor.view(batch_size, -1))
+            k2 = self.aux2(g_tensor.view(batch_size, -1))
             xx = torch.arrange(self.nw).repeat(nw, 1).repeat(batch_size, self.nz_period)
             yy = torch.arrange(self.nw).repeat(nw, 1).t().repeat(batch_size, self.nz_period)
             p_tensor = torch.sin(k1*xx + k2*yy + phi)
@@ -152,7 +151,7 @@ class PSGAN(object):
 
 
     class _netD(nn.Module):
-        def __init__(self, ngpu, nc, ndf):
+        def __init__(self, ngpu, nc, ndf, **kw):
             super().__init__()
             self.ngpu = ngpu
             self.main = nn.Sequential(

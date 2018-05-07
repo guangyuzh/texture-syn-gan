@@ -56,18 +56,17 @@ class GANNetwork(object):
         if torch.cuda.is_available() and not self.opt.cuda:
             print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
+        self.ngpu       = self.opt.ngpu
+        self.n_sample   = self.opt.n_sample
+        self.model      = self.opt.model
+        self.ntw        = self.opt.ntw
+        self.nz         = self.model['nz']
+        self.npx        = self.model['npx']
+        self.nw         = self.model['nw']
+        self.model_type = self.model['model_type']
+        self.nc         = 3
+
         self._load_dataset()
-
-        self.ngpu     = int(self.opt.ngpu)
-        self.nz       = int(self.opt.nz)
-        self.ngf      = int(self.opt.ngf)
-        self.ndf      = int(self.opt.ndf)
-        self.n_sample = int(self.opt.n_sample)
-        self.npx      = int(self.opt.npx)
-        self.nw       = int(self.opt.nw)
-        self.ntw      = int(self.opt.ntw)
-        self.nc       = 3
-
         self._init_netG()
         self._init_netD()
         self.criterion = nn.BCELoss()
@@ -95,20 +94,20 @@ class GANNetwork(object):
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ]),
             imageSize=self.opt.imageSize,
-            npx=self.opt.npx,
+            npx=self.npx,
             n_sample=self.opt.n_sample
         )
         self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.opt.batchSize, shuffle=True, num_workers=int(self.opt.workers))
 
     def _init_netG(self):
-        self.netG = getattr(gan, self.opt.model_type)._netG(self.ngpu, self.nz, self.ngf, self.nc)
+        self.netG = getattr(gan, self.model_type)._netG(self.ngpu, self.nc, **self.model)
         self.netG.apply(gan.weights_init)
         if self.opt.netG != '':
             self.netG.load_state_dict(torch.load(self.opt.netG))
         print(self.netG)
 
     def _init_netD(self):
-        self.netD = getattr(gan, self.opt.model_type)._netD(self.ngpu, self.nc, self.ndf)
+        self.netD = getattr(gan, self.model_type)._netD(self.ngpu, self.nc, **self.model)
         self.netD.apply(gan.weights_init)
         if self.opt.netD != '':
             self.netD.load_state_dict(torch.load(self.opt.netD))
