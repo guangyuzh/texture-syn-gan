@@ -10,6 +10,8 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 from torch.autograd import Variable
 from gan import _netG, _netD, weights_init
+from prediction import PredOpt
+
 
 class GANNetwork(object):
 
@@ -58,6 +60,7 @@ class GANNetwork(object):
         self.nw       = int(self.opt.nw)
         self.ntw      = int(self.opt.ntw)
         self.nc       = 3
+        self.pred     = self.opt.pred
 
         self._init_netG()
         self._init_netD()
@@ -67,6 +70,10 @@ class GANNetwork(object):
         # setup optimizer
         self.optimizerD = optim.Adam(self.netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
         self.optimizerG = optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+        # Prediction in https://openreview.net/forum?id=Skj8Kag0Z&noteId=rkLymJTSf
+        self.optimizer_predD = PredOpt(self.netD.parameters())
+        self.optimizer_predG = PredOpt(self.netG.parameters())
+        self.lookahead_step = 1.0 if self.pred else 0.0
 
     def _rand_seed(self):
         if self.opt.manualSeed is None:
@@ -128,6 +135,7 @@ class GANNetwork(object):
         if self.opt.cuda:
             noise = noise.cuda()
         noise.normal_(0, 1)
+        noise = Variable(noise, volatile=True)
         fake = self.netG(noise)
         vutils.save_image(fake.data,
             '%s/texture_output_%03d.png' % (self.opt.outf, epoch),
@@ -160,25 +168,34 @@ class GANNetwork(object):
                 # train with fake
                 self.noise.resize_(batch_size, self.nz, self.nw, self.nw).normal_(0, 1)
                 noisev = Variable(self.noise)
-                fake = self.netG(noisev)
-                labelv = Variable(self.label.fill_(self.fake_label))
-                output = self.netD(fake.detach())
-                errD_fake = self.criterion(output, labelv)
-                errD_fake.backward()
-                D_G_z1 = output.data.mean()
-                errD = errD_real + errD_fake
-                self.optimizerD.step()
+
+                # Compute gradient of D w/ predicted G
+                with self.optimizer_predG.lookahead(step=self.lookahead_step):
+                    fake = self.netG(noisev)
+                    labelv = Variable(self.label.fill_(self.fake_label))
+                    output = self.netD(fake.detach())
+                    errD_fake = self.criterion(output, labelv)
+                    errD_fake.backward()
+                    D_G_z1 = output.data.mean()
+                    errD = errD_real + errD_fake
+                    self.optimizerD.step()
+                    self.optimizer_predD.step()
 
                 ############################
                 # (2) Update G network: maximize log(D(G(z)))
                 ###########################
                 self.netG.zero_grad()
                 labelv = Variable(self.label.fill_(self.real_label))  # fake labels are real for generator cost
-                output = self.netD(fake)
-                errG = self.criterion(output, labelv)
-                errG.backward()
-                D_G_z2 = output.data.mean()
-                self.optimizerG.step()
+
+                # Compute gradient of G w/ predicted D
+                with self.optimizer_predD.lookahead(step=self.lookahead_step):
+                    fake = self.netG(noisev)
+                    output = self.netD(fake)
+                    errG = self.criterion(output, labelv)
+                    errG.backward()
+                    D_G_z2 = output.data.mean()
+                    self.optimizerG.step()
+                    self.optimizer_predG.step()
 
                 print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
                       % (epoch, self.opt.niter, i, len(self.dataloader),

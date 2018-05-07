@@ -17,6 +17,7 @@ default: &default_params
     netD: '' # path to netD (to continue training)
     outf: 'outputs/' # folder to output images and model checkpoints
     manualSeed: # manual seed
+    pred: False # https://github.com/sanghoon/prediction_gan
     # for Spatial GAN:
     n_sample: 10
     npx: 64 # num of pixels width/height of images in X
@@ -32,7 +33,7 @@ texture_syn:
     lr: 0.0005
     niter: 6400
 
-archpc:
+archpc: &archpc
     <<: *default_params
     dataroot: '/data/adam/dataset/plants/green/'
     imageSize: 256
@@ -41,3 +42,10 @@ archpc:
     beta1: 0.1
     lr: 0.0005
     niter: 100
+
+predict:
+    <<: *archpc
+    dataroot: '../../data/dtd/images/braided/'
+    pred: True
+    lr: 0.001
+    niter: 50
