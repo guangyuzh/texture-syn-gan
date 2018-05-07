@@ -27,7 +27,7 @@ default: &default_params
     niter: 25 # number of epochs to train for
     lr: 0.0002 # learning rate
     beta1: 0.5 # beta1 for adam
-    cuda: True # enables cuda
+    cuda: True # enables use_cuda
     ngpu: 1 # number of GPUs to use
     netG: '' # path to netG (to continue training)
     netD: '' # path to netD (to continue training)

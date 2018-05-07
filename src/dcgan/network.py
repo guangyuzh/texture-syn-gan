@@ -14,6 +14,7 @@ from timeit import timeit
 import math
 import gan
 
+
 class GANNetwork(object):
 
     class RandomImageFolder(dset.ImageFolder):
@@ -60,6 +61,7 @@ class GANNetwork(object):
         self.ngpu       = self.opt.ngpu
         self.n_sample   = self.opt.n_sample
         self.model      = self.opt.model
+        self.model['cuda'] = self.opt.cuda
         self.ntw        = self.opt.ntw
         self.nz         = self.model['nz']
         self.npx        = self.model['npx']

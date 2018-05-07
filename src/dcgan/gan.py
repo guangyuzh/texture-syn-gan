@@ -89,12 +89,13 @@ class SGAN(object):
 ### five layers PSGAN
 class PSGAN(object):
     class _netG(nn.Module):
-        def __init__(self, ngpu, nc, ngf, nz, nh, nz_global, nz_period, **kw):
+        def __init__(self, ngpu, nc, ngf, nz, nh, nz_global, nz_period, cuda, **kw):
             super().__init__()
             self.ngpu      = ngpu
             self.nh        = nh
             self.nz_global = nz_global
             self.nz_period = nz_period
+            self.use_cuda = cuda
             self.main = nn.Sequential(
                 # input is nz x 5 x 5
                 # output is nc x 127 x 127
@@ -140,10 +141,15 @@ class PSGAN(object):
             g_tensor_expanded = g_tensor.repeat(1, 1, nw, nw)
             k1 = self.aux1(g_tensor.view(batch_size, -1)).view(batch_size, -1, 1, 1).repeat(1, 1, nw, nw)
             k2 = self.aux2(g_tensor.view(batch_size, -1)).view(batch_size, -1, 1, 1).repeat(1, 1, nw, nw)
-            xx = Variable(torch.arange(nw).repeat(nw, 1).repeat(batch_size, self.nz_period, 1, 1).cuda())
-            yy = Variable(torch.arange(nw).repeat(nw, 1).t().repeat(batch_size, self.nz_period, 1, 1).cuda())
+            xx = torch.arange(nw).repeat(nw, 1).repeat(batch_size, self.nz_period, 1, 1)
+            yy = torch.arange(nw).repeat(nw, 1).t().repeat(batch_size, self.nz_period, 1, 1)
+            if self.use_cuda:
+                xx = Variable(xx.cuda())
+                yy = Variable(yy.cuda())
+            else:
+                xx = Variable(xx)
+                yy = Variable(yy)
             phi_tensor = phi.view(-1, 1, 1, 1).repeat(1, self.nz_period, nw, nw)
-            print(k1.shape, k2.shape, xx.shape, yy.shape, phi_tensor.shape)
             p_tensor = torch.sin(k1*xx + k2*yy + phi_tensor)
 
             input = torch.cat([l_tensor, g_tensor_expanded, p_tensor], 1)
