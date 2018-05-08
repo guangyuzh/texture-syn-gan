@@ -5,7 +5,6 @@ import torch.nn.parallel
 import torch.utils.data
 from torch.autograd import Variable
 
-
 # custom weights initialization called on netG and netD
 def weights_init(m):
     classname = m.__class__.__name__
@@ -14,7 +13,6 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
-
 
 class SGAN(object):
     class _netG(nn.Module):
@@ -192,4 +190,4 @@ class PSGAN(object):
             else:
                 output = self.main(input)
 
-            return output.view(-1, 1).squeeze(1)
+            return output

@@ -135,7 +135,7 @@ class GANNetwork(object):
     def _init_input(self):
         self.input = torch.FloatTensor(self.opt.batchSize, self.nc, self.npx, self.npx)
         self.fixed_noise = self._get_noise(self.opt.batchSize)
-        self.label = torch.FloatTensor(self.opt.batchSize, self.nw, self.nw)
+        self.label = torch.FloatTensor(self.opt.batchSize, 1, self.nw, self.nw)
         self.real_label = 1
         self.fake_label = 0
 
@@ -148,12 +148,18 @@ class GANNetwork(object):
     def test(self, input_sz, epoch):
         ### generate texture using netG
         ### taking input of size 1 * zdim * input_sz * input_sz
+
+        ### switch to evaluation mode
+        ### this is important as batchnorm uses *per batch* stats by default
+        self.netG.eval()
         noise = self._get_noise(1, self.ntw)
         fake = self.netG(*noise)
         vutils.save_image(fake.data,
             '%s/texture_output_%03d.png' % (self.opt.outf, epoch),
             normalize=True
         )
+        ### switch back to training mode
+        self.netG.train()
 
     def train(self):
         cudnn.benchmark = True
@@ -169,7 +175,7 @@ class GANNetwork(object):
                 if self.opt.cuda:
                     real_cpu = real_cpu.cuda()
                 self.input.resize_as_(real_cpu).copy_(real_cpu)
-                self.label.resize_(batch_size * self.nw**2).fill_(self.real_label)
+                self.label.resize_(batch_size, 1, self.nw, self.nw).fill_(self.real_label)
                 inputv = Variable(self.input)
                 labelv = Variable(self.label)
 
