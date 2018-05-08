@@ -148,7 +148,7 @@ class GANNetwork(object):
     def test(self, input_sz, epoch):
         ### generate texture using netG
         ### taking input of size 1 * zdim * input_sz * input_sz
-        noise = self._get_noise(1, self.ntw)
+        noise = self._get_noise(2, self.ntw)
         fake = self.netG(*noise)
         vutils.save_image(fake.data,
             '%s/texture_output_%03d.png' % (self.opt.outf, epoch),
@@ -158,59 +158,10 @@ class GANNetwork(object):
     def train(self):
         cudnn.benchmark = True
         for epoch in range(self.opt.niter):
-            for i, data in enumerate(self.dataloader, 0):
                 ############################
                 # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
                 ###########################
                 # train with real
-                self.netD.zero_grad()
-                real_cpu, _ = data
-                batch_size = real_cpu.size(0)
-                if self.opt.cuda:
-                    real_cpu = real_cpu.cuda()
-                self.input.resize_as_(real_cpu).copy_(real_cpu)
-                self.label.resize_(batch_size * self.nw**2).fill_(self.real_label)
-                inputv = Variable(self.input)
-                labelv = Variable(self.label)
-
-                output = self.netD(inputv)
-                errD_real = self.criterion(output, labelv)
-                errD_real.backward()
-                D_x = output.data.mean()
-
-                # train with fake
-                noisev = self._get_noise(batch_size)
-                fake = self.netG(*noisev)
-                labelv = Variable(self.label.fill_(self.fake_label))
-                output = self.netD(fake.detach())
-                errD_fake = self.criterion(output, labelv)
-                errD_fake.backward()
-                D_G_z1 = output.data.mean()
-                errD = errD_real + errD_fake
-                self.optimizerD.step()
-
-                ############################
-                # (2) Update G network: maximize log(D(G(z)))
-                ###########################
-                self.netG.zero_grad()
-                labelv = Variable(self.label.fill_(self.real_label))  # fake labels are real for generator cost
-                output = self.netD(fake)
-                errG = self.criterion(output, labelv)
-                errG.backward()
-                D_G_z2 = output.data.mean()
-                self.optimizerG.step()
-
-                print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
-                      % (epoch, self.opt.niter, i, len(self.dataloader),
-                         errD.data[0], errG.data[0], D_x, D_G_z1, D_G_z2))
-                if i % 100 == 0:
-                    vutils.save_image(real_cpu,
-                                      '%s/real_samples.png' % self.opt.outf,
-                                      normalize=True)
-                    fake = self.netG(*self.fixed_noise)
-                    vutils.save_image(fake.data,
-                                      '%s/fake_samples_epoch_%03d.png' % (self.opt.outf, epoch),
-                                      normalize=True)
             self.test(self.ntw, epoch)
 
             # do checkpointing

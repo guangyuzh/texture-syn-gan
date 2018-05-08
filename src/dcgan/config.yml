@@ -29,8 +29,8 @@ default: &default_params
     beta1: 0.5 # beta1 for adam
     cuda: True # enables use_cuda
     ngpu: 1 # number of GPUs to use
-    netG: '' # path to netG (to continue training)
-    netD: '' # path to netD (to continue training)
+    netG: 'outputs/netG_epoch_100.pth' # path to netG (to continue training)
+    netD: 'outputs/netD_epoch_100.pth' # path to netD (to continue training)
     outf: 'outputs/' # folder to output images and model checkpoints
     manualSeed: # manual seed
     n_sample: 10 # number of samples for each image
@@ -51,7 +51,7 @@ archpc:
     <<: *default_params
     dataroot: '../../data/dtd/images/braided/'
     imageSize: 600
-    ntw: 40
+    ntw: 25 
     n_sample: 480
     batchSize: 24
     lr: 0.0002
