@@ -1,26 +1,41 @@
+models:
+    sgan5: &sgan5
+        model_type: 'SGAN'
+        ngf: 64
+        ndf: 64
+        nz: 50 # depth of the latent z tensor
+        npx: 129 # num of pixels width/height of images in X
+        nw: 5 # height and width of z tensor
+    psgan5: &psgan5
+        model_type: 'PSGAN'
+        ngf: 64
+        ndf: 64
+        nz: 64
+        nh: 60
+        nz_local: 40
+        nz_global: 20
+        nz_period: 4
+        npx: 129
+        nw: 5
+
 default: &default_params
     dataroot: '../../data/dtd/'
     workers: 2 # number of data loading workers
     batchSize: 64 # input batch size
     imageSize: 516 # the height / width of the input image to network
-    nz: 10 # depth of the latent z tensor
-    nw: 4 # height and width of z tensor
     ntw: 160 # height and width of z tensor at test time
-    ngf: 128
-    ndf: 128
     niter: 25 # number of epochs to train for
     lr: 0.0002 # learning rate
     beta1: 0.5 # beta1 for adam
-    cuda: True # enables cuda
+    cuda: True # enables use_cuda
     ngpu: 1 # number of GPUs to use
     netG: '' # path to netG (to continue training)
     netD: '' # path to netD (to continue training)
     outf: 'outputs/' # folder to output images and model checkpoints
     manualSeed: # manual seed
-    pred: False # https://github.com/sanghoon/prediction_gan
-    # for Spatial GAN:
-    n_sample: 10
-    npx: 64 # num of pixels width/height of images in X
+    n_sample: 10 # number of samples for each image
+    models: *sgan5
+    pred: True # https://github.com/sanghoon/prediction_gan
 
 more_niter:
     <<: *default_params
@@ -33,19 +48,13 @@ texture_syn:
     lr: 0.0005
     niter: 6400
 
-archpc: &archpc
+archpc:
     <<: *default_params
-    dataroot: '/data/adam/dataset/plants/green/'
-    imageSize: 256
-    n_sample: 240
-    batchSize: 10
-    beta1: 0.1
-    lr: 0.0005
-    niter: 100
-
-predict:
-    <<: *archpc
-    dataroot: '../../data/dtd/images/braided/'
-    pred: True
-    lr: 0.001
-    niter: 50
+    dataroot: '../../data/dtd/images/scaly/'
+    imageSize: 600
+    ntw: 40
+    n_sample: 48
+    batchSize: 24
+    lr: 0.0002
+    niter: 200
+    model: *psgan5
