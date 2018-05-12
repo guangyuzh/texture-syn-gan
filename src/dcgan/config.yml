@@ -12,14 +12,13 @@ models:
         ndf: 64
         nz: 64
         nh: 60
-        nz_local: 40
-        nz_global: 20
+        nz_local: 20
+        nz_global: 40
         nz_period: 4
         npx: 129
         nw: 5
 
 default: &default_params
-    dataroot: '../../data/dtd/'
     workers: 2 # number of data loading workers
     batchSize: 64 # input batch size
     imageSize: 516 # the height / width of the input image to network
@@ -49,7 +48,6 @@ texture_syn:
 
 archpc:
     <<: *default_params
-    dataroot: '../../data/dtd/images/braided/'
     imageSize: 600
     ntw: 40
     n_sample: 480
