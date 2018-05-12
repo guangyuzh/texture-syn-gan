@@ -35,7 +35,7 @@ default: &default_params
     manualSeed: # manual seed
     n_sample: 10 # number of samples for each image
     models: *sgan5
-    pred: True # https://github.com/sanghoon/prediction_gan
+    pred: False # https://github.com/sanghoon/prediction_gan
 
 more_niter:
     <<: *default_params
@@ -48,7 +48,7 @@ texture_syn:
     lr: 0.0005
     niter: 6400
 
-archpc:
+archpc: &archpc
     <<: *default_params
     dataroot: '../../data/dtd/images/scaly/'
     imageSize: 600
@@ -56,5 +56,11 @@ archpc:
     n_sample: 48
     batchSize: 24
     lr: 0.0002
-    niter: 200
+    niter: 400
     model: *psgan5
+
+predict:
+    <<" *archpc
+    lr: 0.01
+    pred: True
+
