@@ -35,17 +35,6 @@ default: &default_params
     n_sample: 10 # number of samples for each image
     models: *sgan5
 
-more_niter:
-    <<: *default_params
-    batchSize: 1
-    niter: 100
-
-texture_syn:
-    <<: *default_params
-    beta1: 0.1
-    lr: 0.0005
-    niter: 6400
-
 archpc:
     <<: *default_params
     imageSize: 600

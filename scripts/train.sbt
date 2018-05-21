@@ -14,7 +14,7 @@ module purge
 module load pytorch/python3.6/0.3.0_4
 
 
-CONFIG='texture_syn'
+CONFIG='archpc'
 
 cd ../src/dcgan
-python3 -u main.py --dataset folder --dataroot ../../data/dtd/ --config $CONFIG > logs/gan.log
+python3 -u main.py --dataroot ../../data/dtd/ --config $CONFIG > logs/gan.log

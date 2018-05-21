@@ -1,7 +1,13 @@
-# dl-gan
+# Periodic Spatial GAN for Texture Synthesis
+
+### Usage
+```bash
+cd src/dcgan
+python main.py --dataroot $PATH_TO_DTD_DATA --config archpc
+```
 
 ### Datasets
-
+* [Describable Textures Dataset (DTD)](https://www.robots.ox.ac.uk/~vgg/data/dtd/)
 
 ### Resources
 * [PyTorch DCGAN example](https://github.com/pytorch/examples/tree/master/dcgan) (replicated [
