@@ -5,6 +5,7 @@
 cd src/dcgan
 python main.py --dataroot $PATH_TO_DTD_DATA --config archpc
 ```
+To change configurations for hyperparameters, add definitions in `src/dcgan/config.yml`, and use the newly added yaml name (e.g., `archpc`) for the `--config` flag.
 
 ### Datasets
 * [Describable Textures Dataset (DTD)](https://www.robots.ox.ac.uk/~vgg/data/dtd/)
